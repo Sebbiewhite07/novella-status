@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novella Collector Status</title>
+<meta name="description" content="Live health of the Project-Novella prediction-market order-book collector. Aggregates only, refreshed every five minutes.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1b1f24; --muted: #5f6a75; --line: #e3e7ec;
+    --ok: #1a7f4b; --ok-bg: #e4f5ec; --warn: #9a5b00; --warn-bg: #fff2d9; --bad: #b3261e; --bad-bg: #fde8e6;
+    --accent: #2456c9;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; margin: 28px 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .sub { color: var(--muted); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 20px; }
+  .ok { color: var(--ok); background: var(--ok-bg); } .warn { color: var(--warn); background: var(--warn-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tile .v { font-size: 24px; font-weight: 650; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .d { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-top: 0; }
+  td.num, th.num { text-align: right; }
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .reasons { color: var(--muted); font-size: 12px; white-space: normal; }
+  footer { margin-top: 36px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+  a { color: var(--accent); }
+  #err { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Novella collector</h1>
+    <span id="overall" class="pill warn">loading…</span>
+    <span class="sub" id="updated"></span>
+  </header>
+
+  <p class="sub">A research collector recording full-depth order books from six prediction-market venues into an append-only history. This page shows only aggregate health; no market data is published. It cannot trade, by construction.</p>
+
+  <p id="err" class="pill bad">The status file could not be loaded.</p>
+
+  <h2>Totals</h2>
+  <div class="grid" id="totals"></div>
+
+  <h2>Venues</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr>
+      <th>Venue</th><th>Status</th><th class="num">Books</th><th class="num">Active markets</th>
+      <th class="num">Rows / day</th><th class="num">Rows total</th><th class="num">Streams</th><th>Up since</th>
+    </tr></thead>
+    <tbody id="venues"></tbody>
+  </table>
+  </div>
+
+  <h2>Matching engine</h2>
+  <div class="grid" id="stage2"></div>
+
+  <footer>
+    Updated every five minutes from the collector's own heartbeats. Times are UTC. Source: <a href="https://github.com/Sebbiewhite07/Project-Novella">Project-Novella</a>.
+  </footer>
+</main>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const n = (v) => (v == null ? '—' : Number(v).toLocaleString('en-GB'));
+  const gb = (b) => (b == null ? '—' : (b / 1e9).toFixed(1) + ' GB');
+  const ago = (iso) => {
+    if (!iso) return '—';
+    const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+    if (s < 90) return Math.round(s) + ' s ago';
+    if (s < 5400) return Math.round(s / 60) + ' min ago';
+    if (s < 172800) return (s / 3600).toFixed(1) + ' h ago';
+    return Math.round(s / 86400) + ' d ago';
+  };
+  const cls = (st) => st === 'ok' ? 'ok' : (st === 'degraded' ? 'warn' : 'bad');
+  const tile = (k, v, d) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${d ? `<div class="d">${d}</div>` : ''}</div>`;
+
+  function render(s) {
+    const t = s.totals || {};
+    const allOk = t.venues > 0 && t.venues_ok === t.venues;
+    const stale = (Date.now() - Date.parse(s.generated_at)) > 20 * 60 * 1000;
+    const ov = $('overall');
+    ov.textContent = stale ? 'stale snapshot' : (allOk ? 'all venues collecting' : `${t.venues_ok} of ${t.venues} venues ok`);
+    ov.className = 'pill ' + (stale ? 'bad' : (allOk ? 'ok' : 'warn'));
+    $('updated').textContent = 'updated ' + ago(s.generated_at) + ' (' + s.generated_at.replace('T', ' ').replace('Z', ' UTC') + ')';
+    $('totals').innerHTML =
+      tile('Rows recorded', n(t.rows_total), 'append-only history') +
+      tile('Rows per day', n(t.rows_per_day), 'current rate') +
+      tile('Books tracked', n(t.books_known), `of ${n(t.active_markets)} active markets`) +
+      tile('Database', gb(t.db_size_bytes), t.days_to_full != null ? `${Number(t.days_to_full).toFixed(0)} days of disk at this rate` : '');
+    $('venues').innerHTML = (s.venues || []).map(v => `<tr>
+      <td>${v.venue}</td>
+      <td><span class="pill ${cls(v.status)}">${v.status}</span>${(v.reasons && v.reasons.length) ? `<div class="reasons">${v.reasons.join('; ')}</div>` : ''}</td>
+      <td class="num">${n(v.books_known)}<span class="reasons"> / ${n(v.subscribed)}</span></td>
+      <td class="num">${n(v.active_markets)}</td>
+      <td class="num">${n(v.rows_per_day)}</td>
+      <td class="num">${n(v.rows_total)}</td>
+      <td class="num">${v.ws_connections == null ? 'poll' : n(v.ws_connections)}</td>
+      <td>${v.up_since ? v.up_since.replace('T', ' ').replace('Z', '') : '—'}</td>
+    </tr>`).join('');
+    const s2 = s.stage2 || {};
+    const live = !!s2.analyzer_cursor || !!s2.matcher_last_cycle;
+    $('stage2').innerHTML = live
+      ? tile('Matched market pairs', n(s2.validated_pairs), 'validated identical-resolution pairs') +
+        tile('Instrument links', n(s2.instrument_links), 'binary markets paired across venues') +
+        tile('Provisional pairs', n(s2.provisional_pairs), 'awaiting the golden-set gate') +
+        tile('Opportunity episodes', n(s2.opportunity_episodes), 'after fees, on recorded data')
+      : tile('Not started yet', '—', 'the matcher and analyzer run once the collection has a base of data; matched market pairs will appear here');
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('status.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      render(await r.json());
+      $('err').style.display = 'none';
+    } catch (e) {
+      $('err').style.display = 'inline-block';
+      $('overall').textContent = 'unavailable'; $('overall').className = 'pill bad';
+    }
+  }
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>
