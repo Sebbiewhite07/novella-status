@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novella Live Opportunities</title>
+<meta name="description" content="Cross-venue prediction-market opportunities found live by Project-Novella, net of fees, with filters. Refreshed every five minutes.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1b1f24; --muted: #5f6a75; --line: #e3e7ec; --chip: #eef1f5;
+    --ok: #1a7f4b; --ok-bg: #e4f5ec; --warn: #9a5b00; --warn-bg: #fff2d9; --bad: #b3261e; --bad-bg: #fde8e6;
+    --accent: #2456c9; --accent-ink: #ffffff; --bar: #2456c9; --bar2: #e0a33b;
+    --c1: #2456c9; --c2: #c2410c; --c3: #1a7f4b; --c4: #7c3aed; --c5: #b45309; --c6: #0e7490; --c7: #6b7280;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a; --chip: #1e252e;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff; --accent-ink: #0f1216; --bar: #8ab4ff; --bar2: #e0a33b;
+    --c1: #8ab4ff; --c2: #f08a4b; --c3: #4cc47d; --c4: #b18cf7; --c5: #e3a64a; --c6: #45b8d0; --c7: #9aa3ad;
+    color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a; --chip: #1e252e;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff; --accent-ink: #0f1216; --bar: #8ab4ff; --bar2: #e0a33b;
+    --c1: #8ab4ff; --c2: #f08a4b; --c3: #4cc47d; --c4: #b18cf7; --c5: #e3a64a; --c6: #45b8d0; --c7: #9aa3ad;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }   /* .pill etc. set display, which would override the attribute */
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 12px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 14px; margin: 0 0 8px; font-weight: 600; }
+  .sub { color: var(--muted); }
+  .note { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+  a { color: var(--accent); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 20px; }
+  .ok { color: var(--ok); background: var(--ok-bg); } .warn { color: var(--warn); background: var(--warn-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
+  .layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 14px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  aside { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 14px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+  @media (max-width: 900px) { aside { position: static; max-height: none; } }
+  .fg { display: grid; gap: 6px; }
+  .fl { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px; padding: 2px 10px; font-family: inherit; font-size: 12.5px; font-weight: 500; line-height: 1.5; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 6px 8px; font-family: inherit; font-size: 13px; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .presets { display: grid; gap: 5px; }
+  .preset { text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1.3; }
+  .preset b { display: block; } .preset span { color: var(--muted); font-size: 12px; }
+  .preset:hover { border-color: var(--accent); }
+  .content { display: grid; gap: 14px; min-width: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  .tile .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tile .v { font-size: 22px; font-weight: 650; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .tile .d { color: var(--muted); font-size: 12px; }
+  .charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 1100px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  canvas { width: 100%; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--card); color: var(--ink); padding: 6px 12px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tablewrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { border-top: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+  th[aria-sort="descending"]::after { content: " ↓"; color: var(--accent); }
+  th[aria-sort="ascending"]::after { content: " ↑"; color: var(--accent); }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  tr.ep { cursor: pointer; } tr.ep:hover td { background: var(--chip); }
+  .mk { min-width: 260px; max-width: 480px; }
+  .mk .meta { color: var(--muted); font-size: 12px; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .tag { display: inline-block; border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 600; line-height: 18px; }
+  .t-open { background: var(--ok-bg); color: var(--ok); } .t-ip { background: var(--warn-bg); color: var(--warn); } .t-cat { background: var(--chip); color: var(--muted); }
+  .pos { color: var(--ok); font-weight: 600; }
+  tr.detail td { background: var(--bg); padding: 12px 14px; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 22px; }
+  .dgrid .k { color: var(--muted); font-size: 12px; }
+  .more { display: flex; justify-content: center; padding: 10px; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+  #tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 6px; padding: 6px 9px; font-size: 12px; max-width: 320px; z-index: 5; }
+  footer { margin-top: 30px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Novella live opportunities</h1>
+    <span id="state" class="pill warn">loading…</span>
+    <span class="sub" id="updated"></span>
+    <a href="./">Collector status →</a>
+  </header>
+  <p class="note">Cross-venue opportunities on validated identical-resolution market pairs, found live by the analyzer from recorded full-depth order books: buy YES on one venue and NO on the other for less than the $1 the pair pays out. Figures are taken at each episode's best moment, net of fees. Research only: nothing here is traded, and the analyzer cannot trade by construction.</p>
+  <p id="err" class="pill bad" hidden>The live file could not be loaded.</p>
+
+  <div class="layout">
+    <aside aria-label="Filters">
+      <div class="fg"><span class="fl">Quick views</span><div class="presets" id="presets"></div></div>
+      <div class="fg"><label class="fl" for="q">Search markets</label><input type="search" id="q" placeholder="e.g. FDV, Hegseth, Fed"></div>
+      <div class="fg"><span class="fl">Status</span><div class="chips" id="f-st"></div></div>
+      <div class="fg"><span class="fl">First seen in the last</span><div class="chips" id="f-win"></div></div>
+      <div class="fg"><span class="fl">Venue pair</span><div class="chips" id="f-vp"></div></div>
+      <div class="fg"><span class="fl">When</span><div class="chips" id="f-ph"></div>
+        <span class="note">In-play: seen after the game started or the scheduled end; usually one venue lagging, not fillable.</span></div>
+      <div class="fg"><span class="fl">Category</span><div class="chips" id="f-cat"></div></div>
+      <div class="fg"><span class="fl">Net return, %</span><div class="row2"><input type="number" id="rmin" step="0.1" placeholder="min" aria-label="Minimum net return"><input type="number" id="rmax" step="0.1" placeholder="max" aria-label="Maximum net return"></div></div>
+      <div class="fg"><span class="fl">Size (cost of the fill), $</span><div class="row2"><input type="number" id="cmin" step="10" placeholder="min" aria-label="Minimum size"><input type="number" id="cmax" step="10" placeholder="max" aria-label="Maximum size"></div></div>
+      <div class="fg"><label class="fl" for="pmin">Net profit at least, $</label><input type="number" id="pmin" step="1" placeholder="any"></div>
+      <div class="fg"><span class="fl">Lasted at least</span><div class="chips" id="f-dur"></div></div>
+      <div class="fg"><span class="fl">Days to resolution</span><div class="chips" id="f-hz"></div></div>
+      <div class="fg"><label class="fl" for="amin">Annualized return at least, %</label><input type="number" id="amin" step="1" placeholder="any"></div>
+      <button class="btn" type="button" id="reset">Reset all filters</button>
+    </aside>
+
+    <div class="content">
+      <section class="tiles" id="tiles" aria-label="Summary of the filtered results"></section>
+      <section class="charts">
+        <div class="card"><h2>Opportunities per hour</h2><canvas id="hours" height="220" aria-label="Episodes opened per hour"></canvas>
+          <div class="legend"><span><i style="background:var(--bar)"></i>before the event</span><span><i style="background:var(--bar2)"></i>in-play</span><span>Last 48 hours, UTC, with the current filters.</span></div></div>
+        <div class="card"><h2>Return against size</h2><canvas id="scatter" height="220" aria-label="Net return against fill size"></canvas><div class="legend" id="legend"></div></div>
+      </section>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Table view">
+          <button type="button" id="v-ep" aria-pressed="true">Episodes</button>
+          <button type="button" id="v-pair" aria-pressed="false">Market pairs</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="sub" id="count"></span>
+          <button class="btn" type="button" id="csv">Download CSV</button>
+        </div>
+      </div>
+      <div class="tablewrap"><table id="tbl"></table></div>
+      <div class="more"><button class="btn" type="button" id="more" hidden>Show 100 more</button></div>
+    </div>
+  </div>
+  <footer>
+    Net return and size are at each episode's best moment, after each venue's taker fees (Polymarket per-market rate, Predict.fun 2%, Limitless 3%→0.4% paid in tokens). The same resting orders recur across episodes, so sizes and profits must not be added up. Days to resolution use the scheduled end of whichever leg has one (Predict.fun publishes none); markets can resolve early or late. Settlement differs across venues (UMA, venue-run resolution), so no pair is risk-free. Categories are guessed from the question text. Updated every five minutes; the page re-reads the data every minute. Source: <a href="https://github.com/Sebbiewhite07/Project-Novella">Project-Novella</a>.
+  </footer>
+</main>
+<div id="tip" hidden></div>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const VN = { polymarket: 'Polymarket', predictfun: 'Predict.fun', limitless: 'Limitless', sxbet: 'SX Bet', myriad: 'Myriad', bodega: 'Bodega' };
+  const vpName = (vp) => vp.split('-').map(v => VN[v] || v).join(' ↔ ');
+  const CATS = ['Crypto', 'Sports', 'Economy & markets', 'Politics', 'Tech & culture', 'Weather', 'Other'];
+  const css = () => getComputedStyle(document.documentElement);
+  const tok = (n) => css().getPropertyValue(n).trim();
+  const catColor = (c) => tok('--c' + (CATS.indexOf(c) + 1));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = (v, d = 0) => v == null ? '—' : Number(v).toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const money = (v) => v == null ? '—' : '$' + num(v, v < 100 ? 2 : 0);
+  const pct = (r, d) => r == null ? '—' : (r * 100).toLocaleString('en-GB', { minimumFractionDigits: d ?? (Math.abs(r) < 0.1 ? 2 : 1), maximumFractionDigits: d ?? (Math.abs(r) < 0.1 ? 2 : 1) }) + '%';
+  const dur = (s) => s == null ? '—' : s < 60 ? s + ' s' : s < 3600 ? (s / 60).toFixed(s < 600 ? 1 : 0) + ' min' : s < 172800 ? (s / 3600).toFixed(1) + ' h' : (s / 86400).toFixed(1) + ' d';
+  const when = (iso) => iso ? iso.slice(5, 16).replace('T', ' ') : '—';
+  const ago = (iso) => { const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000); return s < 90 ? Math.round(s) + ' s ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : (s / 3600).toFixed(1) + ' h ago'; };
+  const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const dirText = (e) => { const [a, b] = e.vp.split('-').map(v => VN[v] || v); return e.dir === 'yesA_noB' ? `Buy YES on ${a} and NO on ${b}` : `Buy NO on ${a} and YES on ${b}`; };
+  const hzOf = (e) => e.days == null ? 'unknown' : e.days < 30 ? 'lt30' : e.days < 180 ? '30_180' : e.days < 365 ? '180_365' : 'ge365';
+
+  function category(q, ev) {
+    const t = ((q || '') + ' ' + (ev || '')).toLowerCase();
+    if (/weather|temperature/.test(t)) return 'Weather';
+    if (/\bfdv\b|launch a token|airdrop|bitcoin|ethereum|solana|\bxrp\b|crypto|megaeth|hyperliquid|stablecoin|\bstrc\b|microstrategy|coinbase|binance|token/.test(t)) return 'Crypto';
+    if (/exact score|both teams|\bvs\.? |draw\b|win on 20\d\d|halftime|championship|finals|\bnba\b|\bnfl\b|\bnhl\b|\bmlb\b|\bafc\b|\bnfc\b|premier league|laliga|la liga|serie a|bundesliga|ligue 1|champions league|world cup|super bowl|stanley cup|world series|wimbledon|ballon|\bmvp\b|grand prix|\bufc\b|win the 20\d\d|league|\bcup\b|division|conference|playoffs|relegat|top scorer|pro football|lol worlds/.test(t)) return 'Sports';
+    if (/election|president|presidential|prime minister|nominee|nomination|senate|congress|governor|mayor|ballot|trump|biden|harris|vance|democrat|republican|parliament|chancellor|impeach|supreme court|pope|head of state|leader of|maduro|nobel|signed into law|war\b|ceasefire|invade|nato|tariff|deport/.test(t)) return 'Politics';
+    if (/\bfed\b|rate cut|rate hike|fomc|recession|inflation|\bcpi\b|\bgdp\b|unemployment|interest rate|treasury|acquired|acquisition|s&p|nasdaq|\bdow\b|\bgold\b|\boil\b|stock|\bipo\b|market cap/.test(t)) return 'Economy & markets';
+    if (/openai|anthropic|\bai\b|gpt|gemini|claude|grok|\bllm\b|model|apple|google|tesla|spacex|nvidia|\bmeta\b|microsoft|amazon|tiktok|\bgta\b|rotten tomatoes|box office|album|movie|oscar|grammy|emmy|netflix|spotify|youtube/.test(t)) return 'Tech & culture';
+    return 'Other';
+  }
+
+  let D = null, E = [];
+  const WIN = [['1h', '1 h', 3600], ['6h', '6 h', 21600], ['24h', '24 h', 86400], ['3d', '3 d', 259200], ['all', '7 d', Infinity]];
+  const DUR = [['any', 'Any', 0], ['10', '10 s', 10], ['60', '1 min', 60], ['600', '10 min', 600], ['3600', '1 h', 3600]];
+  const HZ = [['lt30', 'Under 30 d'], ['30_180', '30–180 d'], ['180_365', '180–365 d'], ['ge365', '1 y+'], ['unknown', 'Unknown']];
+  const DEFAULT = { q: '', st: 'all', win: '24h', vp: null, ph: 'pre', cats: CATS.slice(), rmin: '', rmax: '', cmin: '', cmax: '', pmin: '', dur: 'any', hz: HZ.map(h => h[0]), amin: '', view: 'ep', sort: 'f', dir: -1 };
+  let F = JSON.parse(JSON.stringify(DEFAULT));
+  try { const s = JSON.parse(localStorage.getItem('novella-live-filters') || 'null'); if (s) F = Object.assign(F, s); } catch (e) {}
+  const save = () => { try { localStorage.setItem('novella-live-filters', JSON.stringify(F)); } catch (e) {} };
+
+  const PRESETS = [
+    ['Open right now', 'Edges live at the last poll, best first', { st: 'open', win: 'all', ph: 'pre', dur: 'any', sort: 'r', dir: -1 }],
+    ['Real edges, last 24 h', 'Before the event, lasted 1 min+, size $100+', { st: 'all', win: '24h', ph: 'pre', dur: '60', cmin: '100', sort: 'r', dir: -1 }],
+    ['Biggest dollars', 'Largest net profit, last 7 days', { st: 'all', win: 'all', ph: 'pre', sort: 'p', dir: -1 }],
+    ['Long-lived', 'Held for an hour or more', { st: 'all', win: 'all', ph: 'pre', dur: '3600', sort: 'd', dir: -1 }],
+    ['Short horizon', 'Resolves within 30 days, by annualized return', { st: 'all', win: 'all', ph: 'pre', hz: ['lt30'], sort: 'ann', dir: -1 }],
+    ['In-play only', 'After kick-off: usually not fillable', { st: 'all', win: 'all', ph: 'ip', sort: 'r', dir: -1 }],
+    ['Everything', 'All episodes of the last 7 days', { st: 'all', win: 'all', ph: 'all', dur: 'any', sort: 'f', dir: -1 }],
+  ];
+
+  function pass(e) {
+    const now = Date.now();
+    if (F.st !== 'all' && e.st !== F.st) return false;
+    const w = WIN.find(x => x[0] === F.win);
+    if (w && isFinite(w[2]) && now - Date.parse(e.f) > w[2] * 1000) return false;
+    if (F.vp && !F.vp.includes(e.vp)) return false;
+    if (F.ph === 'pre' && e.ip) return false;
+    if (F.ph === 'ip' && !e.ip) return false;
+    if (!F.cats.includes(e.cat)) return false;
+    const r = (e.r ?? 0) * 100;
+    if (F.rmin !== '' && r < +F.rmin) return false;
+    if (F.rmax !== '' && r > +F.rmax) return false;
+    if (F.cmin !== '' && (e.c ?? 0) < +F.cmin) return false;
+    if (F.cmax !== '' && (e.c ?? 0) > +F.cmax) return false;
+    if (F.pmin !== '' && (e.p ?? 0) < +F.pmin) return false;
+    if (F.dur !== 'any' && e.d < +F.dur) return false;
+    if (!F.hz.includes(hzOf(e))) return false;
+    if (F.amin !== '' && (e.ann == null || e.ann * 100 < +F.amin)) return false;
+    if (F.q) { const t = F.q.toLowerCase(); if (!((e.qa || '').toLowerCase().includes(t) || (e.qb || '').toLowerCase().includes(t) || (e.ev || '').toLowerCase().includes(t))) return false; }
+    return true;
+  }
+
+  const toggleIn = (arr, k) => arr.includes(k) ? arr.filter(x => x !== k) : arr.concat(k);
+  function chipGroup(el, items, isOn, toggle) {
+    el.innerHTML = items.map(([k, label]) => `<button type="button" class="chip" data-k="${esc(k)}" aria-pressed="${isOn(k)}">${esc(label)}</button>`).join('');
+    el.onclick = (ev) => { const b = ev.target.closest('.chip'); if (!b) return; toggle(b.dataset.k); limit = 100; render(); };
+  }
+  function controls() {
+    const vps = [...new Set(E.map(e => e.vp))].sort();
+    if (!F.vp) F.vp = vps.slice();
+    chipGroup($('f-st'), [['all', 'All'], ['open', 'Open now'], ['closed', 'Closed']], k => F.st === k, k => F.st = k);
+    chipGroup($('f-win'), WIN.map(w => [w[0], w[1]]), k => F.win === k, k => F.win = k);
+    chipGroup($('f-vp'), vps.map(v => [v, vpName(v)]), k => F.vp.includes(k), k => F.vp = toggleIn(F.vp, k));
+    chipGroup($('f-ph'), [['pre', 'Before the event'], ['ip', 'In-play'], ['all', 'Both']], k => F.ph === k, k => F.ph = k);
+    chipGroup($('f-cat'), CATS.filter(c => E.some(e => e.cat === c)).map(c => [c, c]), k => F.cats.includes(k), k => F.cats = toggleIn(F.cats, k));
+    chipGroup($('f-dur'), DUR.map(d => [d[0], d[1]]), k => F.dur === k, k => F.dur = k);
+    chipGroup($('f-hz'), HZ, k => F.hz.includes(k), k => F.hz = toggleIn(F.hz, k));
+    for (const id of ['q', 'rmin', 'rmax', 'cmin', 'cmax', 'pmin', 'amin']) $(id).value = F[id];
+    $('v-ep').setAttribute('aria-pressed', F.view === 'ep'); $('v-pair').setAttribute('aria-pressed', F.view === 'pair');
+  }
+  for (const id of ['q', 'rmin', 'rmax', 'cmin', 'cmax', 'pmin', 'amin']) $(id).addEventListener('input', () => { F[id] = $(id).value.trim(); limit = 100; renderData(); save(); });
+  $('presets').innerHTML = PRESETS.map((p, i) => `<button type="button" class="preset" data-i="${i}"><b>${esc(p[0])}</b><span>${esc(p[1])}</span></button>`).join('');
+  $('presets').onclick = (ev) => { const b = ev.target.closest('.preset'); if (!b) return; F = Object.assign(JSON.parse(JSON.stringify(DEFAULT)), { view: F.view }, JSON.parse(JSON.stringify(PRESETS[+b.dataset.i][2]))); limit = 100; render(); };
+  $('reset').onclick = () => { F = JSON.parse(JSON.stringify(DEFAULT)); limit = 100; render(); };
+  $('v-ep').onclick = () => { F.view = 'ep'; if (!EP_SORTS[F.sort]) F.sort = 'f'; render(); };
+  $('v-pair').onclick = () => { F.view = 'pair'; if (!PAIR_SORTS[F.sort]) F.sort = 'best'; render(); };
+
+  function byPair(rows) {
+    const m = new Map();
+    for (const e of rows) {
+      let g = m.get(e.l);
+      if (!g) { g = { l: e.l, vp: e.vp, qa: e.qa, qb: e.qb, cat: e.cat, ua: e.ua, ub: e.ub, eps: [] }; m.set(e.l, g); }
+      g.eps.push(e);
+    }
+    return [...m.values()].map(g => ({
+      ...g, n: g.eps.length, open: g.eps.reduce((a, e) => a + e.d, 0), longest: Math.max(...g.eps.map(e => e.d)),
+      med: median(g.eps.map(e => e.r ?? 0)), best: Math.max(...g.eps.map(e => e.r ?? 0)), cmax: Math.max(...g.eps.map(e => e.c ?? 0)),
+      pmax: Math.max(...g.eps.map(e => e.p ?? 0)), live: g.eps.some(e => e.st === 'open'), last: g.eps.map(e => e.f).sort().pop(),
+      ip: g.eps.every(e => e.ip),
+    }));
+  }
+
+  const EP_SORTS = { qa: e => e.qa, r: e => e.r ?? -1, c: e => e.c ?? 0, p: e => e.p ?? 0, d: e => e.d, days: e => e.days ?? 1e9, ann: e => e.ann ?? -1, f: e => e.f, n: e => e.n };
+  const PAIR_SORTS = { qa: g => g.qa, n: g => g.n, open: g => g.open, longest: g => g.longest, med: g => g.med, best: g => g.best, cmax: g => g.cmax, pmax: g => g.pmax, last: g => g.last };
+  let limit = 100, openId = null, current = [];
+  const tags = (e) => `<span class="tag t-cat">${esc(e.cat)}</span>` + (e.st === 'open' || e.live ? '<span class="tag t-open">Open now</span>' : '') + (e.ip ? '<span class="tag t-ip">In-play</span>' : '');
+  function sparkline(vals) {
+    if (!vals || vals.length < 2) return '<span class="k">One snapshot only</span>';
+    const W = 220, H = 44, lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const pts = vals.map((v, i) => `${(i / (vals.length - 1) * (W - 4) + 2).toFixed(1)},${(H - 4 - (v - lo) / span * (H - 8)).toFixed(1)}`).join(' ');
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net return over the episode"><polyline points="${pts}" fill="none" stroke="${tok('--accent')}" stroke-width="1.6"/></svg><div class="k">${vals[0].toFixed(2)}% → ${vals[vals.length - 1].toFixed(2)}%</div>`;
+  }
+  function detail(e) {
+    const link = (u, t) => u ? ` · <a href="${esc(u)}" target="_blank" rel="noopener">${t}</a>` : '';
+    return `<tr class="detail"><td colspan="9"><div class="dgrid">
+      <div><div class="k">Trade</div>${esc(dirText(e))}<div class="k" style="margin-top:6px">${esc(vpName(e.vp))} · market pair #${e.l}</div></div>
+      <div><div class="k">Leg A</div>${esc(e.qa)}${link(e.ua, 'open market')}${e.qb && e.qb !== e.qa ? `<div class="k" style="margin-top:6px">Leg B</div>${esc(e.qb)}` : ''}${link(e.ub, 'open market')}</div>
+      <div><div class="k">At the best moment</div>${num(e.sh, 0)} share-pairs for ${money(e.c)}, fees ${money(e.fee)}, net ${money(e.p)} (${pct(e.r)})</div>
+      <div><div class="k">Episode</div>first seen ${esc(when(e.f))} UTC, last ${esc(when(e.ls))}, lasted ${dur(e.d)}, ${num(e.n)} evaluations · ${e.st === 'open' ? 'still open' : 'closed: ' + esc((e.cr || '').replace(/_/g, ' '))}</div>
+      <div><div class="k">Horizon</div>${e.days == null ? 'unknown' : num(e.days, 0) + ' days to the scheduled end' + (e.ol ? ' (from the one leg with an end date)' : '')}${e.ann != null ? ` · annualized ${pct(e.ann, 1)}` : ''}</div>
+      <div><div class="k">Net return over the episode</div>${sparkline(e.sp)}</div>
+    </div></td></tr>`;
+  }
+  const th = (key, label, n) => `<th class="${n ? 'num' : ''}" data-s="${key}" aria-sort="${F.sort === key ? (F.dir < 0 ? 'descending' : 'ascending') : 'none'}">${label}</th>`;
+  function renderTable(rows) {
+    const sorts = F.view === 'ep' ? EP_SORTS : PAIR_SORTS;
+    const key = sorts[F.sort] || sorts[F.view === 'ep' ? 'f' : 'best'];
+    rows.sort((a, b) => { const x = key(a), y = key(b); return (x > y ? 1 : x < y ? -1 : 0) * F.dir; });
+    current = rows;
+    const shown = rows.slice(0, limit);
+    let h;
+    if (F.view === 'ep') {
+      h = `<thead><tr>${th('qa', 'Market')}${th('r', 'Net return', 1)}${th('c', 'Size', 1)}${th('p', 'Net profit', 1)}${th('d', 'Lasted', 1)}${th('days', 'Days to res.', 1)}${th('ann', 'Annualized', 1)}${th('f', 'First seen', 1)}${th('n', 'Evals', 1)}</tr></thead><tbody>` +
+        shown.map(e => `<tr class="ep" data-id="${e.id}" tabindex="0" aria-expanded="${openId === e.id}">
+          <td class="mk"><div>${esc(e.qa)}</div><div class="meta"><span>${esc(vpName(e.vp))}</span>${tags(e)}</div></td>
+          <td class="num pos">${pct(e.r)}</td><td class="num">${money(e.c)}</td><td class="num">${money(e.p)}</td><td class="num">${dur(e.d)}</td>
+          <td class="num">${e.days == null ? '—' : num(e.days, 0)}</td><td class="num">${pct(e.ann, 1)}</td><td class="num">${esc(when(e.f))}</td><td class="num">${num(e.n)}</td></tr>` +
+          (openId === e.id ? detail(e) : '')).join('') + '</tbody>';
+    } else {
+      h = `<thead><tr>${th('qa', 'Market pair')}${th('n', 'Episodes', 1)}${th('open', 'Time open', 1)}${th('longest', 'Longest', 1)}${th('med', 'Median return', 1)}${th('best', 'Best return', 1)}${th('cmax', 'Largest size', 1)}${th('pmax', 'Best profit', 1)}${th('last', 'Last seen', 1)}</tr></thead><tbody>` +
+        shown.map(g => `<tr><td class="mk"><div>${esc(g.qa)}</div><div class="meta"><span>${esc(vpName(g.vp))} · #${g.l}</span>${tags(g)}${g.ua ? `<a href="${esc(g.ua)}" target="_blank" rel="noopener">open</a>` : ''}</div></td>
+          <td class="num">${num(g.n)}</td><td class="num">${dur(g.open)}</td><td class="num">${dur(g.longest)}</td><td class="num">${pct(g.med)}</td><td class="num pos">${pct(g.best)}</td>
+          <td class="num">${money(g.cmax)}</td><td class="num">${money(g.pmax)}</td><td class="num">${esc(when(g.last))}</td></tr>`).join('') + '</tbody>';
+    }
+    if (!rows.length) h = '<tbody><tr><td class="empty">No opportunities match these filters. Widen the time window or reset the filters.</td></tr></tbody>';
+    $('tbl').innerHTML = h;
+    $('more').hidden = rows.length <= limit;
+    $('count').textContent = `${num(rows.length)} ${F.view === 'ep' ? 'episodes' : 'market pairs'}${rows.length > limit ? `, showing ${num(limit)}` : ''}`;
+  }
+  $('tbl').addEventListener('click', (ev) => {
+    const h = ev.target.closest('th'); if (h) { const k = h.dataset.s; if (F.sort === k) F.dir = -F.dir; else { F.sort = k; F.dir = k === 'qa' ? 1 : -1; } renderData(); save(); return; }
+    if (ev.target.closest('a')) return;
+    const r = ev.target.closest('tr.ep'); if (!r) return; const id = +r.dataset.id; openId = openId === id ? null : id; renderTable(current);
+  });
+  $('tbl').addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.matches('tr.ep')) ev.target.click(); });
+  $('more').onclick = () => { limit += 100; renderTable(current); };
+
+  function renderTiles(rows) {
+    const open = E.filter(e => e.st === 'open' && !e.ip);
+    const day = E.filter(e => !e.ip && Date.now() - Date.parse(e.f) < 86400e3);
+    const best = rows.reduce((a, e) => !a || (e.r ?? 0) > (a.r ?? 0) ? e : a, null);
+    const big = rows.reduce((a, e) => !a || (e.c ?? 0) > (a.c ?? 0) ? e : a, null);
+    const tile = (k, v, d) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+    $('tiles').innerHTML =
+      tile('Open right now', num(open.length), `before the event · ${num(new Set(open.map(e => e.l)).size)} market pairs`) +
+      tile('Last 24 hours', num(day.length), `episodes before the event · ${num(D.near_misses_24h)} near-misses`) +
+      tile('Filtered', num(rows.length), `median ${pct(median(rows.map(e => e.r ?? 0)))} net, lasted ${dur(median(rows.map(e => e.d)))}`) +
+      tile('Best return', best ? pct(best.r) : '—', best ? `on ${money(best.c)}` : '') +
+      tile('Largest size', big ? money(big.c) : '—', big ? `at ${pct(big.r)}` : '');
+  }
+
+  const tipEl = $('tip'); let scatterPts = [];
+  function setup(cv) { const r = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.height / (cv._r || 1); cv._r = r; cv.width = w * r; cv.height = h * r; cv.style.height = h + 'px'; const ctx = cv.getContext('2d'); ctx.setTransform(r, 0, 0, r, 0, 0); return [ctx, w, h]; }
+  function renderHours(rows) {
+    const cv = $('hours'); const [ctx, W, H] = setup(cv); const L = 36, R = 6, T = 8, B = 26;
+    ctx.clearRect(0, 0, W, H);
+    const now = Date.now(), hour = 3600e3, start = Math.floor(now / hour) * hour - 47 * hour;
+    const pre = new Array(48).fill(0), ip = new Array(48).fill(0);
+    for (const e of rows) { const i = Math.floor((Date.parse(e.f) - start) / hour); if (i >= 0 && i < 48) (e.ip ? ip : pre)[i]++; }
+    const max = Math.max(1, ...pre.map((v, i) => v + ip[i])), step = (W - L - R) / 48, bw = Math.max(1, step * 0.75);
+    ctx.font = '11px system-ui'; ctx.fillStyle = tok('--muted'); ctx.strokeStyle = tok('--line');
+    for (const t of [0, Math.ceil(max / 2), max]) { const y = H - B - t / max * (H - T - B); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - R, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(String(t), L - 5, y + 4); }
+    for (let i = 0; i < 48; i++) {
+      const x = L + i * step + (step - bw) / 2, h1 = pre[i] / max * (H - T - B), h2 = ip[i] / max * (H - T - B);
+      ctx.fillStyle = tok('--bar'); ctx.fillRect(x, H - B - h1, bw, h1);
+      ctx.fillStyle = tok('--bar2'); ctx.fillRect(x, H - B - h1 - h2, bw, h2);
+      const hh = new Date(start + i * hour).getUTCHours();
+      if (hh % 6 === 0) { ctx.fillStyle = tok('--muted'); ctx.textAlign = 'center'; ctx.fillText(String(hh).padStart(2, '0') + ':00', x + bw / 2, H - 8); }
+    }
+  }
+  function renderScatter(rows) {
+    const cv = $('scatter'); const [ctx, W, H] = setup(cv); const L = 48, R = 8, T = 8, B = 30;
+    ctx.clearRect(0, 0, W, H);
+    const pts = rows.filter(e => (e.c ?? 0) > 0 && (e.r ?? 0) > 0);
+    const lo = 0, hi = Math.max(1, Math.ceil(Math.log10(Math.max(10, ...pts.map(e => e.c)))));
+    const ylo = Math.floor(Math.log10(Math.max(0.001, Math.min(1, ...pts.map(e => e.r))))), yhi = Math.ceil(Math.log10(Math.max(0.01, ...pts.map(e => e.r))));
+    const X = (c) => L + (Math.log10(Math.max(1, c)) - lo) / (hi - lo || 1) * (W - L - R);
+    const Y = (r) => H - B - (Math.log10(r) - ylo) / ((yhi - ylo) || 1) * (H - T - B);
+    ctx.font = '11px system-ui'; ctx.fillStyle = tok('--muted'); ctx.strokeStyle = tok('--line');
+    for (let p = lo; p <= hi; p++) { const x = X(10 ** p); ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, H - B); ctx.stroke(); ctx.textAlign = 'center'; ctx.fillText('$' + (10 ** p >= 1000 ? 10 ** p / 1000 + 'k' : 10 ** p), x, H - B + 14); }
+    for (let p = ylo; p <= yhi; p++) { const y = Y(10 ** p); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - R, y); ctx.stroke(); ctx.textAlign = 'right'; const v = 10 ** p * 100; ctx.fillText((v >= 1 ? v.toFixed(0) : v.toFixed(1)) + '%', L - 5, y + 4); }
+    scatterPts = [];
+    for (const e of pts) { const x = X(e.c), y = Y(e.r); scatterPts.push([x, y, e]); ctx.globalAlpha = 0.6; ctx.fillStyle = catColor(e.cat); ctx.strokeStyle = catColor(e.cat); ctx.beginPath(); ctx.arc(x, y, e.st === 'open' ? 4 : 2.6, 0, 7); if (e.ip) { ctx.globalAlpha = 0.9; ctx.stroke(); } else ctx.fill(); }
+    ctx.globalAlpha = 1;
+    $('legend').innerHTML = CATS.filter(c => rows.some(e => e.cat === c)).map(c => `<span><i style="background:${catColor(c)}"></i>${esc(c)}</span>`).join('') + '<span>Size (x) and net return (y), log scales. Large dots are open now; rings are in-play.</span>';
+  }
+  $('scatter').addEventListener('mousemove', (ev) => {
+    const rc = ev.target.getBoundingClientRect(), mx = ev.clientX - rc.left, my = ev.clientY - rc.top;
+    let best = null, bd = 64; for (const p of scatterPts) { const d = (p[0] - mx) ** 2 + (p[1] - my) ** 2; if (d < bd) { bd = d; best = p; } }
+    if (!best) { tipEl.hidden = true; return; }
+    const e = best[2]; tipEl.innerHTML = `<b>${esc(e.qa)}</b><br>${pct(e.r)} on ${money(e.c)} · lasted ${dur(e.d)}<br>${esc(vpName(e.vp))} · ${esc(when(e.f))}`;
+    tipEl.hidden = false; tipEl.style.left = Math.min(ev.clientX + 12, window.innerWidth - 330) + 'px'; tipEl.style.top = (ev.clientY + 12) + 'px';
+  });
+  $('scatter').addEventListener('mouseleave', () => { tipEl.hidden = true; });
+
+  $('csv').onclick = () => {
+    const q = (s) => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+    const rows = F.view === 'ep' ? current : current;
+    const csv = F.view === 'ep'
+      ? ['episode_id,market_pair_id,venue_pair,category,status,in_play,market_a,market_b,trade,net_return,size_usd,net_profit_usd,fees_usd,share_pairs,duration_s,first_seen_utc,last_seen_utc,days_to_resolution,annualized_return,evaluations,close_reason,link_a,link_b']
+          .concat(rows.map(e => [e.id, e.l, e.vp, q(e.cat), e.st, e.ip, q(e.qa), q(e.qb), q(dirText(e)), e.r, e.c, e.p, e.fee, e.sh, e.d, e.f, e.ls, e.days ?? '', e.ann ?? '', e.n, e.cr ?? '', q(e.ua), q(e.ub)].join(','))).join('\n')
+      : ['market_pair_id,venue_pair,category,market_a,episodes,time_open_s,longest_s,median_return,best_return,largest_size_usd,best_profit_usd,last_seen_utc,link_a']
+          .concat(rows.map(g => [g.l, g.vp, q(g.cat), q(g.qa), g.n, g.open, g.longest, g.med, g.best, g.cmax, g.pmax, g.last, q(g.ua)].join(','))).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `novella-live-${F.view === 'ep' ? 'episodes' : 'market-pairs'}-${new Date().toISOString().slice(0, 16).replace(':', '')}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  function renderData() {
+    const rows = E.filter(pass);
+    renderTiles(rows); renderHours(rows); renderScatter(rows);
+    renderTable(F.view === 'ep' ? rows.slice() : byPair(rows));
+  }
+  function render() { controls(); renderData(); save(); }
+  function header() {
+    const st = $('state');
+    const stale = Date.now() - Date.parse(D.generated_at) > 20 * 60e3;
+    const ok = D.running && D.lag_sec != null && D.lag_sec < 600 && !stale;
+    st.textContent = stale ? 'stale data' : D.running ? (ok ? 'live' : `behind by ${dur(D.lag_sec)}`) : 'analyzer stopped';
+    st.className = 'pill ' + (ok ? 'ok' : stale || !D.running ? 'bad' : 'warn');
+    $('updated').textContent = `data ${ago(D.generated_at)} · analyzer ${D.lag_sec == null ? '—' : dur(D.lag_sec)} behind real time · live since ${when(D.live_since)} UTC`;
+  }
+  async function load(first) {
+    try {
+      const r = await fetch('live.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      D = await r.json();
+      E = (D.episodes || []).map(e => ({ ...e, cat: category(e.qa, e.ev) }));
+      $('err').hidden = true;
+      header();
+      if (first) render(); else renderData();
+    } catch (err) {
+      $('err').hidden = false; $('state').textContent = 'unavailable'; $('state').className = 'pill bad';
+    }
+  }
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => D && renderData(), 150); });
+  load(true);
+  setInterval(() => load(false), 60000);
+})();
+</script>
+</body>
+</html>

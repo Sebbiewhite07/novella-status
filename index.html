@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novella Collector Status</title>
+<meta name="description" content="Live health of the Project-Novella prediction-market order-book collector. Aggregates only, refreshed every five minutes.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1b1f24; --muted: #5f6a75; --line: #e3e7ec;
+    --ok: #1a7f4b; --ok-bg: #e4f5ec; --warn: #9a5b00; --warn-bg: #fff2d9; --bad: #b3261e; --bad-bg: #fde8e6;
+    --accent: #2456c9; --bar: #2456c9; --bar-open: #8fb0f0;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff; --bar: #8ab4ff; --bar-open: #3f5f95; color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --card: #161b22; --ink: #e6e9ee; --muted: #9aa5b1; --line: #2a313a;
+    --ok: #4cc47d; --ok-bg: #12301f; --warn: #e0a33b; --warn-bg: #3a2a08; --bad: #f28b82; --bad-bg: #3d1614;
+    --accent: #8ab4ff; --bar: #8ab4ff; --bar-open: #3f5f95; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; margin: 32px 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .sub { color: var(--muted); }
+  .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; max-width: 72ch; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 20px; }
+  .ok { color: var(--ok); background: var(--ok-bg); } .warn { color: var(--warn); background: var(--warn-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .tile .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tile .v { font-size: 24px; font-weight: 650; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .d { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-top: 0; }
+  td.num, th.num { text-align: right; }
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .reasons { color: var(--muted); font-size: 12px; white-space: normal; }
+  .meter { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: var(--line); vertical-align: middle; margin-left: 8px; overflow: hidden; }
+  .meter > i { display: block; height: 100%; background: var(--ok); }
+  .two { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; align-items: start; }
+  @media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+  svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .bar-rect { fill: var(--bar); } .bar-open { fill: var(--bar-open); }
+  .axis { stroke: var(--line); }
+  ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+  ul.plain li { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  ul.plain li span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  footer { margin-top: 36px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+  a { color: var(--accent); }
+  #err { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Novella collector</h1>
+    <span id="overall" class="pill warn">loading…</span>
+    <span class="sub" id="updated"></span>
+    <a href="live.html">Live opportunities →</a>
+  </header>
+
+  <p class="sub">A research collector recording full-depth order books from six prediction-market venues into an append-only history, and a matching engine pairing identical markets across venues. This page shows aggregate health. Market-level opportunities found live, with names and filters, are on the <a href="live.html">Live opportunities</a> page. The system cannot trade, by construction.</p>
+
+  <p id="err" class="pill bad">The status file could not be loaded.</p>
+
+  <h2>Totals</h2>
+  <div class="grid" id="totals"></div>
+
+  <h2>Venues</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr>
+      <th>Venue</th><th>Status</th><th class="num">Books</th><th class="num">Listed markets</th>
+      <th class="num">Rows / day</th><th class="num">Last sweep</th><th class="num">Unchanged skipped</th>
+      <th class="num">Coverage 7 d</th><th class="num">Restarts 7 d</th><th class="num">Streams</th><th>Up since</th>
+    </tr></thead>
+    <tbody id="venues"></tbody>
+  </table>
+  </div>
+  <p class="note">Every 10 minutes a sweep checks every book; since 4 Oct a book that has not changed is recorded as proven unchanged instead of written again. Coverage is the share of the last 7 days not inside a recorded gap (restarts and dropped batches).</p>
+
+  <h2>Storage</h2>
+  <div class="two">
+    <div class="card"><h3>On disk per day (live partitions)</h3><div id="days"></div></div>
+    <div class="card"><h3>Archived to the Storage Box</h3><ul class="plain" id="archive"></ul></div>
+  </div>
+
+  <h2>Recent interruptions</h2>
+  <div class="card"><ul class="plain" id="gaps"></ul></div>
+
+  <h2>Matching engine</h2>
+  <div class="grid" id="stage2"></div>
+  <div class="tablewrap" style="margin-top:12px">
+  <table>
+    <thead><tr><th>Venue pair</th><th>Status</th><th class="num">Identical matches</th><th class="num">Usable market pairs</th><th class="num">Candidates judged</th></tr></thead>
+    <tbody id="pairs"></tbody>
+  </table>
+  </div>
+  <p class="note">A venue pair is validated once its matches pass a hand-checked accuracy gate. Usable market pairs are matched markets with a known YES/NO mapping; opportunities are only ever evaluated on validated pairs, after fees.</p>
+
+  <h2>Backtest</h2>
+  <div class="grid" id="bt"></div>
+  <div class="tablewrap" style="margin-top:12px">
+  <table>
+    <thead><tr><th>Venue pair</th><th class="num">Opportunity episodes</th><th class="num">Market pairs</th><th class="num">Median length</th><th class="num">Longest</th><th class="num">Lasting 1 h+</th><th class="num">Median net return</th><th class="num">Best net return</th><th class="num">Largest size</th><th>Days to resolution</th><th class="num">In-play, left out</th><th class="num">Near-misses</th></tr></thead>
+    <tbody id="btpairs"></tbody>
+  </table>
+  </div>
+  <p class="note">A replay of recorded order books through the opportunity engine on validated pairs only. Figures cover episodes seen before the event. In-play episodes (after kick-off or the scheduled end) are counted but left out: one venue lagging the other, usually for one snapshot, is not fillable. Episodes on market pairs later found to be mismatched are left out the same way once the pair is withdrawn. Returns are net of fees at the size shown; size is the cost in dollars of the whole fillable quantity. The same resting orders often recur across episodes, so sizes and profits must not be added up. Limitless order-book sizes are overstated until a known fix lands, and AMM legs are unreliable for now. Predict.fun lists no end dates, so horizons use the other leg's scheduled end. Results fill in while the run is going.</p>
+
+  <footer>
+    Updated every five minutes from the collector's own heartbeats and the database catalog. Times are UTC. Source: <a href="https://github.com/Sebbiewhite07/Project-Novella">Project-Novella</a>.
+  </footer>
+</main>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const n = (v) => (v == null ? '—' : Number(v).toLocaleString('en-GB'));
+  const gb = (b) => (b == null ? '—' : (b / 1e9).toFixed(1) + ' GB');
+  const pct = (x) => (x == null || !isFinite(x) ? '—' : (x >= 99.95 ? '100' : x.toFixed(x >= 99 ? 2 : 1)) + '%');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const VENUE = { polymarket: 'Polymarket', predictfun: 'Predict.fun', limitless: 'Limitless', sxbet: 'SX Bet', myriad: 'Myriad', bodega: 'Bodega' };
+  const vn = (v) => VENUE[v] || v;
+  const ago = (iso) => {
+    if (!iso) return '—';
+    const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+    if (s < 90) return Math.round(s) + ' s ago';
+    if (s < 5400) return Math.round(s / 60) + ' min ago';
+    if (s < 172800) return (s / 3600).toFixed(1) + ' h ago';
+    return Math.round(s / 86400) + ' d ago';
+  };
+  const dur = (sec) => sec < 90 ? Math.round(sec) + ' s' : sec < 5400 ? (sec / 60).toFixed(1) + ' min' : (sec / 3600).toFixed(1) + ' h';
+  const cls = (st) => st === 'ok' ? 'ok' : (st === 'degraded' ? 'warn' : 'bad');
+  const tile = (k, v, d) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${d ? `<div class="d">${d}</div>` : ''}</div>`;
+
+  function coverage(v, since) {
+    const window = Math.min(7 * 86400, Math.max(1, (Date.now() - Date.parse(since || 0)) / 1000));
+    return 100 * Math.max(0, 1 - (v.gap_sec_7d || 0) / window);
+  }
+
+  function daysChart(days) {
+    if (!days.length) return '<p class="sub">No live partitions yet.</p>';
+    const W = 560, H = 170, L = 44, B = 26, T = 8, R = 8;
+    const max = Math.max(...days.map(d => d.bytes)) || 1;
+    const step = (W - L - R) / days.length, bw = Math.min(44, step * 0.7);
+    const y = (b) => T + (H - T - B) * (1 - b / max);
+    const ticks = [0, max / 2, max];
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Bytes on disk per day">`;
+    ticks.forEach(t => { s += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${(t / 1e9).toFixed(0)} GB</text>`; });
+    days.forEach((d, i) => {
+      const x = L + i * step + (step - bw) / 2, yy = y(d.bytes);
+      s += `<rect class="${d.open ? 'bar-open' : 'bar-rect'}" x="${x}" y="${yy}" width="${bw}" height="${H - B - yy}" rx="2"><title>${d.day}${d.days > 1 ? ' (week)' : ''}: ${(d.bytes / 1e9).toFixed(1)} GB${d.open ? ', still filling' : ''}</title></rect>`;
+      s += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${d.day.slice(5)}${d.days > 1 ? ' wk' : ''}</text>`;
+    });
+    return s + '</svg><p class="note">Lighter bar: today, still filling. Older days move to the Storage Box after about 10 days.</p>';
+  }
+
+  function render(s) {
+    const t = s.totals || {};
+    const allOk = t.venues > 0 && t.venues_ok === t.venues;
+    const stale = (Date.now() - Date.parse(s.generated_at)) > 20 * 60 * 1000;
+    const ov = $('overall');
+    ov.textContent = stale ? 'stale snapshot' : (allOk ? 'all venues collecting' : `${t.venues_ok} of ${t.venues} venues ok`);
+    ov.className = 'pill ' + (stale ? 'bad' : (allOk ? 'ok' : 'warn'));
+    $('updated').textContent = 'updated ' + ago(s.generated_at) + ' (' + s.generated_at.replace('T', ' ').replace('Z', ' UTC') + ')';
+
+    const venues = s.venues || [];
+    const covs = venues.map(v => coverage(v, s.collecting_since));
+    const minCov = covs.length ? Math.min(...covs) : null;
+    const host = s.host || {};
+    const arch = s.archive || [];
+    const archBytes = arch.reduce((a, x) => a + (x.archive_bytes || 0), 0);
+    const archRows = arch.reduce((a, x) => a + (x.rows || 0), 0);
+    $('totals').innerHTML =
+      tile('Rows recorded', n(t.rows_total + archRows), `since ${s.collecting_since ? s.collecting_since.slice(0, 10) : '—'}, incl. archived`) +
+      tile('Rows per day', n(t.rows_per_day), 'current rate') +
+      tile('Books tracked', n(t.books_known), `of ${n(t.active_markets)} listed markets`) +
+      tile('Database', gb(t.db_size_bytes), t.days_to_full != null ? `${Number(t.days_to_full).toFixed(0)} days of disk at this rate` : '') +
+      tile('Disk used', host.disk_total_bytes ? Math.round(100 * host.disk_used_bytes / host.disk_total_bytes) + '%' : '—', host.disk_total_bytes ? `${gb(host.disk_used_bytes)} of ${gb(host.disk_total_bytes)}` : '') +
+      tile('Coverage, 7 days', pct(minCov), 'lowest venue; restarts and dropped batches excluded');
+
+    $('venues').innerHTML = venues.map((v, i) => {
+      const sweptTotal = (v.sweep_written || 0) + (v.sweep_skipped || 0);
+      const skip = sweptTotal ? 100 * v.sweep_skipped / sweptTotal : null;
+      const cov = covs[i];
+      return `<tr>
+      <td>${esc(vn(v.venue))}</td>
+      <td><span class="pill ${cls(v.status)}">${esc(v.status)}</span>${(v.reasons && v.reasons.length) ? `<div class="reasons">${esc(v.reasons.join('; '))}</div>` : ''}</td>
+      <td class="num">${n(v.books_known)}<span class="reasons"> / ${n(v.subscribed)}</span></td>
+      <td class="num">${n(v.active_markets)}</td>
+      <td class="num">${n(v.rows_per_day)}</td>
+      <td class="num">${ago(v.last_sweep_at)}</td>
+      <td class="num">${skip == null ? '—' : (v.sweep_skipped === 0 && v.sweep_written > 0 ? 'all written' : pct(skip))}</td>
+      <td class="num">${pct(cov)}<span class="meter"><i style="width:${Math.max(0, Math.min(100, cov || 0))}%"></i></span></td>
+      <td class="num">${n(v.restarts_7d)}${v.drops_7d ? `<span class="reasons"> +${n(v.drops_7d)} drops</span>` : ''}</td>
+      <td class="num">${v.ws_connections == null || v.ws_connections === 0 ? 'poll' : n(v.ws_connections)}</td>
+      <td>${v.up_since ? v.up_since.replace('T', ' ').replace('Z', '').slice(0, 16) : '—'}</td>
+    </tr>`; }).join('');
+
+    $('days').innerHTML = daysChart(s.storage_days || []);
+    $('archive').innerHTML = arch.length
+      ? arch.map(a => `<li><span>${esc(a.partition)} · ${n(a.rows)} rows</span><span>${gb(a.archive_bytes)} <span class="reasons">(was ${esc(a.size_on_disk)})</span></span></li>`).join('') +
+        `<li><span class="sub">Total archived</span><span>${gb(archBytes)}</span></li>`
+      : '<li><span class="sub">Nothing archived yet</span><span></span></li>';
+
+    const gaps = s.recent_gaps || [];
+    $('gaps').innerHTML = gaps.length
+      ? gaps.map(g => `<li><span>${esc(g.gap_start.replace('T', ' ').replace('Z', '').slice(0, 16))} · ${esc(vn(g.venue))} · ${esc(g.kind)}${g.rows_dropped ? ` (${n(g.rows_dropped)} rows)` : ''}</span><span>${dur(g.seconds)}</span></li>`).join('')
+      : '<li><span class="sub">No interruptions recorded</span><span></span></li>';
+
+    const s2 = s.stage2 || {};
+    const pairs = s.venue_pairs || [];
+    $('stage2').innerHTML =
+      tile('Validated matches', n(s2.validated_pairs), 'identical resolution, gate passed') +
+      tile('Usable market pairs', n(s2.usable_links), 'with a known YES/NO mapping') +
+      tile('Awaiting the gate', n(s2.provisional_pairs), 'identical, not yet validated') +
+      tile('Matcher', s2.matcher_last_cycle ? ago(s2.matcher_last_cycle) : 'not run', `${n(s2.llm_verdicts)} LLM verdicts cached`) +
+      tile('Analyzer', s2.analyzer_cursor ? ago(s2.analyzer_cursor) : 'not running', s2.analyzer_cursor ? `${n(s2.opportunity_episodes)} opportunity episodes` : 'starts after the remaining fixes');
+    $('pairs').innerHTML = pairs.map(p => {
+      const [a, b] = p.pair.split('-');
+      return `<tr><td>${esc(vn(a))} ↔ ${esc(vn(b))}</td>
+        <td><span class="pill ${p.validated ? 'ok' : 'warn'}">${p.validated ? 'validated' : 'provisional'}</span></td>
+        <td class="num">${n(p.identical)}</td><td class="num">${n(p.child_links)}</td><td class="num">${n(p.judged)}</td></tr>`;
+    }).join('');
+
+    const bt = s.backtest;
+    const money = (v) => v == null ? '—' : '$' + n(v);
+    const rp = (r) => r == null ? '—' : (100 * r).toFixed(1) + '%';
+    if (!bt) {
+      $('bt').innerHTML = tile('Backtest', 'not run', '');
+      $('btpairs').innerHTML = '';
+    } else {
+      const bps = bt.venue_pairs || [];
+      const done = bt.finished_at != null;
+      const eps = bps.reduce((a, p) => a + (p.episodes || 0), 0);
+      $('bt').innerHTML =
+        tile('Run ' + n(bt.run_id), done ? 'finished' : 'running', done ? 'finished ' + ago(bt.finished_at) : 'started ' + ago(bt.started_at)) +
+        tile('Market pairs replayed', done ? n(bt.pairs_total) : 'running', done ? 'all validated pairs' : `of ${n(bt.pairs_total)}; ${n(bt.pairs_with_results)} with a result so far, latest ${ago(bt.last_result_at)}`) +
+        tile('Window replayed', bt.window_start ? bt.window_start.slice(5, 16).replace('T', ' ') + ' → ' + (bt.window_end || '').slice(5, 16).replace('T', ' ') : '—', 'UTC, recorded data') +
+        tile('Opportunity episodes', n(eps), `before the event, net of fees; ${n(bps.reduce((a, p) => a + (p.inplay || 0) + (p.bad_link || 0), 0))} in-play left out`);
+      $('btpairs').innerHTML = bps.length ? bps.map(p => {
+        const [a, b] = p.pair.split('-');
+        const h = p.horizon || {};
+        const hz = [['under 30 d', h.lt30], ['30–180 d', h['30_180']], ['180 d+', h.ge180], ['unknown', h.unknown]]
+          .filter(x => x[1]).map(x => `${x[0]}: ${n(x[1])}`).join(' · ') || '—';
+        return `<tr><td>${esc(vn(a))} ↔ ${esc(vn(b))}</td>
+          <td class="num">${n(p.episodes)}</td><td class="num">${n(p.links)}</td>
+          <td class="num">${p.median_s == null ? '—' : dur(p.median_s)}</td><td class="num">${p.longest_s == null ? '—' : dur(p.longest_s)}</td>
+          <td class="num">${n(p.over_1h)}</td>
+          <td class="num">${rp(p.median_ret)}</td><td class="num">${rp(p.best_ret)}${p.best_ret == null ? '' : `<span class="reasons"> on ${money(p.best_ret_cost)}</span>`}</td>
+          <td class="num">${money(p.largest_cost)}</td><td><span class="reasons">${hz}</span></td>
+          <td class="num">${n((p.inplay || 0) + (p.bad_link || 0))}</td><td class="num">${n(p.near_misses)}</td></tr>`;
+      }).join('') : '<tr><td colspan="12" class="sub">No episodes yet.</td></tr>';
+    }
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('status.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      render(await r.json());
+      $('err').style.display = 'none';
+    } catch (e) {
+      $('err').style.display = 'inline-block';
+      $('overall').textContent = 'unavailable'; $('overall').className = 'pill bad';
+    }
+  }
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>
